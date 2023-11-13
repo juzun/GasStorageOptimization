@@ -366,7 +366,7 @@ class GasStorage():
         )
         self.monthly_export['Stav %'] = self.monthly_export['Stav']/self.monthly_export['WGV']
     
-    def graphs(self) -> None:
+    def create_graph(self, show_fig: bool = True) -> None:
         self.fig = po.Figure()
         self.fig.add_trace(po.Scatter(x=self.dates, y=list(self.max_operations.values()), name='Max. operations', line_color='#ffa600', mode='lines'))
         self.fig.add_trace(po.Scatter(x=self.dates, y=list(self.res_operations.values()), name='Operations', fill='tozeroy', line_color='#74d576', mode='lines'))
@@ -390,24 +390,11 @@ class GasStorage():
         )
         self.fig.update_xaxes(fixedrange=False)
         self.fig.update_yaxes(zeroline=True, zerolinewidth=3, zerolinecolor='grey')
-        self.fig.show()
-        self.__export_graph_to_html()
-    
-    def __export_graph_to_html(self):
-        self.fig.write_html(f'export/{self.id}_graph.html')
-
-    def export_to_xlsx(self) -> None:
-        with pd.ExcelWriter(f'export/{self.name}_export.xlsx', mode='w', engine='xlsxwriter') as writer:
-            self.daily_export[['Rok','M','W/I','Stav','Stav %','Max C']].to_excel(writer, sheet_name='data_daily', index=True, index_label='Datum')
-            self.monthly_export[['Rok','M','W/I','Stav','Stav %']].to_excel(writer, sheet_name='data_monthly', index=False)
-            percent_format = writer.book.add_format({"num_format": "0%"})
-            writer.sheets['data_daily'].set_column(5, 5, None, percent_format)
-            writer.sheets['data_daily'].set_column(0, 0, 10)
-            writer.sheets['data_monthly'].set_column(4, 4, None, percent_format)
-            print(f'Results exported to {self.id}_export.xlsx')
+        if show_fig:
+            self.fig.show()
 
     @classmethod
-    def export_all_storages(cls) -> None:
+    def collect_all_storages(cls) -> None:
         if not cls._instances:
             raise Exception('No objects initialized yet.')
         for self in cls._instances:
@@ -448,11 +435,6 @@ class GasStorage():
         cls._total_data['M'] = cls._total_data.index.month
         cls._total_data['Stav %'] = cls._total_data['Stav']/cls._total_data['WGV']
 
-        cls.__to_xlsx()
-        cls.__graph()
-
-    @classmethod
-    def __to_xlsx(cls) -> None:
         cls._total_daily_export = pd.DataFrame(
             cls._total_data[['Rok','M','W/I','Stav', 'Stav %','Max C', 'WGV']],
             index=cls._dates)
@@ -484,19 +466,8 @@ class GasStorage():
         )
         cls._total_monthly_export['Stav %'] = cls._total_monthly_export['Stav']/cls._total_monthly_export['WGV']
 
-        with pd.ExcelWriter('export/total_export.xlsx', mode='w', engine='xlsxwriter') as writer:
-            cls._total_daily_export[
-                ['Rok','M','W/I',*[f'{self.name} W/I' for self in cls._instances],'Stav %','Stav',*[f'{self.name} Stav' for self in cls._instances],
-                 'Max C',*[f'{self.name} Max C' for self in cls._instances]]
-            ].to_excel(writer, sheet_name='data_daily', index=True, index_label='Datum')
-            cls._total_monthly_export[['Rok','M','W/I','Stav %','Stav']].to_excel(writer, sheet_name='data_monthly', index=False)
-            writer.sheets['data_daily'].set_column(0, 0, 10)
-            print('Results exported to total_export.xlsx')
-        for self in cls._instances:
-            self.export_to_xlsx()
-
     @classmethod
-    def __graph(cls):
+    def create_total_graph(cls, show_fig: bool = False):
         cls._fig = po.Figure()
         cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_max_operations.values()), name='Max. operations', line_color='#ffa600', mode='lines'))
         cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_operations.values()), name='Operations', fill='tozeroy', line_color='#74d576', mode='lines'))
@@ -520,7 +491,5 @@ class GasStorage():
         )
         cls._fig.update_xaxes(fixedrange=False)
         cls._fig.update_yaxes(zeroline=True, zerolinewidth=3, zerolinecolor='grey')
-        cls._fig.show()
-        cls._fig.write_html('export/total_graph.html')
-        for self in cls._instances:
-            self.graphs()
+        if show_fig:
+            cls._fig.show()
