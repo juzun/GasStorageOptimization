@@ -310,19 +310,6 @@ traitlets = ">=4"
 test = ["pytest"]
 
 [[package]]
-name = "cplex"
-version = "22.1.1.0"
-description = "A Python interface to the CPLEX Callable Library."
-optional = false
-python-versions = "*"
-files = []
-develop = false
-
-[package.source]
-type = "directory"
-url = "../../../cplex/CPLEX_Studio/cplex/python/3.10/x86-64_linux"
-
-[[package]]
 name = "debugpy"
 version = "1.8.0"
 description = "An implementation of the Debug Adapter Protocol for Python"
@@ -2003,4 +1990,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "2f9d6afca0c2da86693c1859339a691718879a06bae93eff187cf5fca6b4f01a"
+content-hash = "6046628e98edf5007c803fb7730dc75b5f523aaca82326c47492206935134e51"

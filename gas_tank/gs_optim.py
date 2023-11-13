@@ -8,7 +8,6 @@ from typing import List, Dict, Union, Literal
 import psutil
 
 
-
 class GasStorage():
     _instances: list = []
     _dates: List[dt.date] = []
