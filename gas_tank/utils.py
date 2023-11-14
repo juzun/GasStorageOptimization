@@ -1,4 +1,4 @@
-from gs_optim import GasStorage
+from gas_tank.gs_optim import GasStorage
 import datetime as dt
 import numpy as np
 import pandas as pd
@@ -32,13 +32,13 @@ def initialize_storage():
     return storage
 
 
-def graph(storage, show_fig: bool = True, path: Path = None):
+def graph(storage, show_fig: bool = True, path: Path = None) -> None:
     storage.create_graph(show_fig=False)
     if path is not None:
         path = path.parent / (path.name + '.html')
         storage.fig.write_html(path)
 
-def export_to_pdf(storage, path: Path = None):
+def export_to_pdf(storage, path: Path = None) -> None:
     if path is None:
         path = f'{storage.id}_export.xlsx'
     else:
@@ -52,7 +52,7 @@ def export_to_pdf(storage, path: Path = None):
         writer.sheets['data_monthly'].set_column(4, 4, None, percent_format)
         print(f'Results exported to {storage.id}_export.xlsx')
 
-def total_export_to_xlsx(path: Path = Path('total_export')):
+def total_export_to_xlsx(path: Path = Path('total_export')) -> None:
     path = path.parent / (path.name + '.xlsx')
     GasStorage.collect_all_storages()
     with pd.ExcelWriter(path, mode='w', engine='xlsxwriter') as writer:
@@ -64,8 +64,11 @@ def total_export_to_xlsx(path: Path = Path('total_export')):
         writer.sheets['data_daily'].set_column(0, 0, 10)
         print(f'Results exported to {path}.xlsx')
 
-def total_graph(show_fig: bool = True, path: Path = None):
+def total_graph(show_fig: bool = True, path: Path = None) -> None:
     GasStorage.create_total_graph(show_fig=True)
     if path is not None:
         path = path.parent / (path.name + '.html')
         GasStorage._fig.write_html(path)
+
+def import_prices(uploaded_file):
+    return pd.read_excel(uploaded_file, parse_dates=['date'], usecols=['date', 'price'])

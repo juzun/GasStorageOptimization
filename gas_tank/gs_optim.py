@@ -83,8 +83,8 @@ class GasStorage():
             else:
                 raise Exception(f"Only following two types of curves are allowed: inj_curve, wit_curve.")
 
-    def load_prices(self, path: str) -> pd.DataFrame:        
-        self.prices_monthly = pd.read_excel(path, parse_dates=['date'], usecols=['date', 'price'])
+    def load_prices(self, imported_prices: pd.DataFrame) -> None:
+        self.prices_monthly = imported_prices
         self.prices_monthly = self.prices_monthly[self.prices_monthly['date'] >= pd.to_datetime(self.date_start.replace(day=1))]
         self.prices_monthly['year'] = self.prices_monthly['date'].dt.year
         self.prices_monthly['month'] = self.prices_monthly['date'].dt.month
