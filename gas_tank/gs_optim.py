@@ -366,7 +366,11 @@ class GasStorage():
         )
         self.monthly_export['Stav %'] = self.monthly_export['Stav']/self.monthly_export['WGV']
     
-    def create_graph(self, show_fig: bool = True) -> None:
+        self.daily_export = self.daily_export[['Rok','M','W/I','Stav','Stav %','Max C']]
+        self.monthly_export = self.monthly_export[['Rok','M','W/I','Stav','Stav %']]
+        
+
+    def create_graph(self) -> None:
         self.fig = po.Figure()
         self.fig.add_trace(po.Scatter(x=self.dates, y=list(self.max_operations.values()), name='Max. operations', line_color='#ffa600', mode='lines'))
         self.fig.add_trace(po.Scatter(x=self.dates, y=list(self.res_operations.values()), name='Operations', fill='tozeroy', line_color='#74d576', mode='lines'))
@@ -390,8 +394,6 @@ class GasStorage():
         )
         self.fig.update_xaxes(fixedrange=False)
         self.fig.update_yaxes(zeroline=True, zerolinewidth=3, zerolinecolor='grey')
-        if show_fig:
-            self.fig.show()
 
     @classmethod
     def collect_all_storages(cls) -> None:
@@ -467,7 +469,7 @@ class GasStorage():
         cls._total_monthly_export['Stav %'] = cls._total_monthly_export['Stav']/cls._total_monthly_export['WGV']
 
     @classmethod
-    def create_total_graph(cls, show_fig: bool = False):
+    def create_total_graph(cls):
         cls._fig = po.Figure()
         cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_max_operations.values()), name='Max. operations', line_color='#ffa600', mode='lines'))
         cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_operations.values()), name='Operations', fill='tozeroy', line_color='#74d576', mode='lines'))
@@ -491,5 +493,43 @@ class GasStorage():
         )
         cls._fig.update_xaxes(fixedrange=False)
         cls._fig.update_yaxes(zeroline=True, zerolinewidth=3, zerolinecolor='grey')
-        if show_fig:
-            cls._fig.show()
+
+
+
+# def graph(storage, show_fig: bool = True, path: Path = None) -> None:
+#     storage.create_graph(show_fig)
+#     if path is not None:
+#         path = path.parent / (path.name + '.html')
+#         storage.fig.write_html(path)
+
+# def export_to_xlsx(storage, path: Path = None) -> None:
+#     if path is None:
+#         path = f'{storage.id}_export.xlsx'
+#     else:
+#         path = path.parent / (path.name + '.xlsx')
+#     with pd.ExcelWriter(path, mode='w', engine='xlsxwriter') as writer:
+#         storage.daily_export[['Rok','M','W/I','Stav','Stav %','Max C']].to_excel(writer, sheet_name='data_daily', index=True, index_label='Datum')
+#         storage.monthly_export[['Rok','M','W/I','Stav','Stav %']].to_excel(writer, sheet_name='data_monthly', index=False)
+#         percent_format = writer.book.add_format({"num_format": "0%"})
+#         writer.sheets['data_daily'].set_column(5, 5, None, percent_format)
+#         writer.sheets['data_daily'].set_column(0, 0, 10)
+#         writer.sheets['data_monthly'].set_column(4, 4, None, percent_format)
+#         print(f'Results exported to {storage.id}_export.xlsx')
+
+# def total_export_to_xlsx(path: Path = Path('total_export')) -> None:
+#     path = path.parent / (path.name + '.xlsx')
+#     GasStorage.collect_all_storages()
+#     with pd.ExcelWriter(path, mode='w', engine='xlsxwriter') as writer:
+#         GasStorage._total_daily_export[
+#             ['Rok','M','W/I',*[f'{self.name} W/I' for self in GasStorage._instances],'Stav %','Stav',*[f'{self.name} Stav' for self in GasStorage._instances],
+#                 'Max C',*[f'{self.name} Max C' for self in GasStorage._instances]]
+#         ].to_excel(writer, sheet_name='data_daily', index=True, index_label='Datum')
+#         GasStorage._total_monthly_export[['Rok','M','W/I','Stav %','Stav']].to_excel(writer, sheet_name='data_monthly', index=False)
+#         writer.sheets['data_daily'].set_column(0, 0, 10)
+#         print(f'Results exported to {path}.xlsx')
+
+# def total_graph(show_fig: bool = True, path: Path = None) -> None:
+#     GasStorage.create_total_graph(show_fig)
+#     if path is not None:
+#         path = path.parent / (path.name + '.html')
+#         GasStorage._fig.write_html(path)
