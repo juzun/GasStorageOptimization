@@ -1,5 +1,6 @@
 from gas_tank.utils import *
 
+st.set_page_config(layout="centered")
 check_session_initialization()
 
 st.title('Upload prices')

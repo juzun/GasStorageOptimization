@@ -9,17 +9,8 @@ import psutil
 
 
 class GasStorage():
-    _instances: list = []
-    _dates: List[dt.date] = []
-    _total_data: pd.DataFrame = None
-    _total_operations: Dict[dt.date, float] = {}
-    _total_max_operations: Dict[dt.date, float] = {}
-    _total_gs_state: Dict[dt.date, float] = {}
-    _total_wgv: Dict[dt.date, float] = {}
 
     def __init__(self, name: str, date_start: dt.date, date_end: dt.date) -> None:
-        GasStorage._instances.append(self)
-        
         self.name: str = name
         self.id: str = name + '_' + dt.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')
         self.date_start: dt.date = date_start
@@ -62,7 +53,7 @@ class GasStorage():
     @property
     def delta(self) -> dt.timedelta:
         return dt.timedelta(days=1)
-
+    
     def __initialize_df(self) -> None:
         self.attr = pd.DataFrame(index=pd.DatetimeIndex(self.dates))
         self.attr['yyyy-mm-dd'] = self.attr.index.date
@@ -364,11 +355,7 @@ class GasStorage():
             )),
             columns=['Rok','M','W/I','Stav','WGV']
         )
-        self.monthly_export['Stav %'] = self.monthly_export['Stav']/self.monthly_export['WGV']
-    
-        self.daily_export = self.daily_export[['Rok','M','W/I','Stav','Stav %','Max C']]
-        self.monthly_export = self.monthly_export[['Rok','M','W/I','Stav','Stav %']]
-        
+        self.monthly_export['Stav %'] = self.monthly_export['Stav']/self.monthly_export['WGV']        
 
     def create_graph(self) -> None:
         self.fig = po.Figure()
@@ -394,142 +381,3 @@ class GasStorage():
         )
         self.fig.update_xaxes(fixedrange=False)
         self.fig.update_yaxes(zeroline=True, zerolinewidth=3, zerolinecolor='grey')
-
-    @classmethod
-    def collect_all_storages(cls) -> None:
-        if not cls._instances:
-            raise Exception('No objects initialized yet.')
-        for self in cls._instances:
-            if not self.solved:
-                raise Exception("One of the objects wasn't solved yet")
-        date_min = min(cls._instances[0].dates)
-        date_max = max(cls._instances[0].dates)
-        for self in cls._instances:
-            if min(self.dates) < date_min:
-                date_min = min(self.dates)
-            if max(self.dates) > date_max:
-                date_max = max(self.dates)
-
-        cls._dates = [date_min + dt.timedelta(days=i) for i in range(0,(date_max-date_min).days+1)]
-        cls._total_operations = {key: 0 for key in cls._dates}
-        cls._total_max_operations = {key: 0 for key in cls._dates}
-        cls._total_gs_state = {key: 0 for key in cls._dates}
-        cls._total_wgv = {key: 0 for key in cls._dates}
-        for self in cls._instances:
-            wgv_dict = self.get_dict_from_column('wgv')
-            for d in cls._dates:
-                if d in self.res_operations.keys():
-                    cls._total_operations[d] += self.res_operations[d]
-                if d in self.max_operations.keys():
-                    cls._total_max_operations[d] += self.max_operations[d]
-                if d in self.res_gs_state.keys():
-                    cls._total_gs_state[d] += self.res_gs_state[d]
-                if d in wgv_dict.keys():
-                    cls._total_wgv[d] += wgv_dict[d]
-        cls._total_data = pd.DataFrame(
-            list(zip(
-                list(cls._total_operations.values()),list(cls._total_gs_state.values()),
-                list(cls._total_max_operations.values()),list(cls._total_wgv.values()))),
-            index=pd.DatetimeIndex(cls._dates),
-            columns=['W/I','Stav','Max C', 'WGV'])
-        cls._total_data['yyyy-mm-dd'] = cls._total_data.index.date
-        cls._total_data['Rok'] = cls._total_data.index.year
-        cls._total_data['M'] = cls._total_data.index.month
-        cls._total_data['Stav %'] = cls._total_data['Stav']/cls._total_data['WGV']
-
-        cls._total_daily_export = pd.DataFrame(
-            cls._total_data[['Rok','M','W/I','Stav', 'Stav %','Max C', 'WGV']],
-            index=cls._dates)
-        total_daily_export_agg = cls._total_daily_export.groupby(['Rok','M']).agg(
-            w_i=('W/I','sum'), year=('Rok', 'min'), month=('M', 'min'), wgv=('WGV', 'min')
-        )
-        for self in cls._instances:
-            cls._total_daily_export[f'{self.name} Stav'] = self.daily_export['Stav']
-            cls._total_daily_export[f'{self.name} W/I'] = self.daily_export['W/I']
-            cls._total_daily_export[f'{self.name} Max C'] = self.daily_export['Max C']
-
-        gs_state_monthly = []
-        z0 = 0
-        for self in cls._instances:
-            if min(self.dates) == min(cls._dates):
-                z0 += self.z0
-        for i, val in enumerate(total_daily_export_agg.w_i.values):
-            if i == 0:
-                gs_state_monthly.append(z0 + val)
-                continue
-            gs_state_monthly.append(gs_state_monthly[i-1] + val)
-
-        cls._total_monthly_export = pd.DataFrame(    
-            list(zip(
-                total_daily_export_agg.year.values, total_daily_export_agg.month.values, 
-                total_daily_export_agg.w_i.values, gs_state_monthly, total_daily_export_agg.wgv
-            )),
-            columns=['Rok','M','W/I','Stav','WGV']
-        )
-        cls._total_monthly_export['Stav %'] = cls._total_monthly_export['Stav']/cls._total_monthly_export['WGV']
-
-    @classmethod
-    def create_total_graph(cls):
-        cls._fig = po.Figure()
-        cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_max_operations.values()), name='Max. operations', line_color='#ffa600', mode='lines'))
-        cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_operations.values()), name='Operations', fill='tozeroy', line_color='#74d576', mode='lines'))
-        cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_gs_state.values()), name='GS state', fill='tozeroy', line_color='#34dbeb', yaxis = 'y2'))
-        cls._fig.update_layout(
-            title = f'Total gas storage optimization',
-            xaxis_title = 'Date',
-            yaxis = dict(
-                title = 'Operations [MWh/day]'),
-            yaxis2 = dict(
-                title = "GS state [MWh]",
-                side = 'right',
-                overlaying = 'y',
-                titlefont = dict(color='#34dbeb'),
-                tickfont = dict(color='#34dbeb')),
-            legend = dict(
-                orientation = "v",
-                x = 1.06,
-                xanchor = 'left',
-                y = 1)
-        )
-        cls._fig.update_xaxes(fixedrange=False)
-        cls._fig.update_yaxes(zeroline=True, zerolinewidth=3, zerolinecolor='grey')
-
-
-
-# def graph(storage, show_fig: bool = True, path: Path = None) -> None:
-#     storage.create_graph(show_fig)
-#     if path is not None:
-#         path = path.parent / (path.name + '.html')
-#         storage.fig.write_html(path)
-
-# def export_to_xlsx(storage, path: Path = None) -> None:
-#     if path is None:
-#         path = f'{storage.id}_export.xlsx'
-#     else:
-#         path = path.parent / (path.name + '.xlsx')
-#     with pd.ExcelWriter(path, mode='w', engine='xlsxwriter') as writer:
-#         storage.daily_export[['Rok','M','W/I','Stav','Stav %','Max C']].to_excel(writer, sheet_name='data_daily', index=True, index_label='Datum')
-#         storage.monthly_export[['Rok','M','W/I','Stav','Stav %']].to_excel(writer, sheet_name='data_monthly', index=False)
-#         percent_format = writer.book.add_format({"num_format": "0%"})
-#         writer.sheets['data_daily'].set_column(5, 5, None, percent_format)
-#         writer.sheets['data_daily'].set_column(0, 0, 10)
-#         writer.sheets['data_monthly'].set_column(4, 4, None, percent_format)
-#         print(f'Results exported to {storage.id}_export.xlsx')
-
-# def total_export_to_xlsx(path: Path = Path('total_export')) -> None:
-#     path = path.parent / (path.name + '.xlsx')
-#     GasStorage.collect_all_storages()
-#     with pd.ExcelWriter(path, mode='w', engine='xlsxwriter') as writer:
-#         GasStorage._total_daily_export[
-#             ['Rok','M','W/I',*[f'{self.name} W/I' for self in GasStorage._instances],'Stav %','Stav',*[f'{self.name} Stav' for self in GasStorage._instances],
-#                 'Max C',*[f'{self.name} Max C' for self in GasStorage._instances]]
-#         ].to_excel(writer, sheet_name='data_daily', index=True, index_label='Datum')
-#         GasStorage._total_monthly_export[['Rok','M','W/I','Stav %','Stav']].to_excel(writer, sheet_name='data_monthly', index=False)
-#         writer.sheets['data_daily'].set_column(0, 0, 10)
-#         print(f'Results exported to {path}.xlsx')
-
-# def total_graph(show_fig: bool = True, path: Path = None) -> None:
-#     GasStorage.create_total_graph(show_fig)
-#     if path is not None:
-#         path = path.parent / (path.name + '.html')
-#         GasStorage._fig.write_html(path)

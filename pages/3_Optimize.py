@@ -1,5 +1,6 @@
 from gas_tank.utils import *
 
+st.set_page_config(layout="wide")
 check_session_initialization()
 
 st.title('Optimize')
@@ -7,9 +8,14 @@ st.title('Optimize')
 check_for_uploaded_prices()
 check_for_initialized_storages()
 
-if st.button('Solve'):
-    solve_button(st.session_state.storages[0])
 
-if st.session_state.solved:
-    for storage in st.session_state.storages:
-        st.write(storage.objective)
+st.button('Solve all', on_click=solve_all_button)
+
+for (tab, storage) in zip(st.tabs(st.session_state.storage_labels), st.session_state.storages):
+    with tab:
+        st.button(f'Solve {storage.id}', on_click=solve_button, args=[storage])
+        
+        if storage.solved:
+            st.text(f'Storage {storage.id} optimized.\nObjective: {storage.objective}')            
+        else:
+            st.info('Not optimized yet.')
