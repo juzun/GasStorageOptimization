@@ -26,17 +26,17 @@ with last_col:
 
 
 # Graphs
-
-storages_labels = [storage.id for storage in st.session_state.storages]
 for (tab, storage) in zip(st.tabs(st.session_state.storage_labels), st.session_state.storages):
     with tab:
-        st.plotly_chart(get_graph(storage), use_container_width=True)
-
-        _, last_col = st.columns([4,1])
-        with last_col:
-            st.download_button(
-                label='Download graph',
-                data=get_graph(storage).to_html(),
-                file_name=f'{storage.id}.html',
-                mime='text/html',
-            )
+        if storage.solved:
+            st.plotly_chart(get_graph(storage), use_container_width=True)
+            _, last_col = st.columns([4,1])
+            with last_col:
+                st.download_button(
+                    label='Download graph',
+                    data=get_graph(storage).to_html(),
+                    file_name=f'{storage.id}.html',
+                    mime='text/html',
+                )
+        else:
+            st.info('Not optimized yet.')

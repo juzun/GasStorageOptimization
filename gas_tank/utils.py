@@ -3,34 +3,45 @@ from gas_tank.gs_optim_tools import *
 import datetime as dt
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import streamlit as st
 import plotly.graph_objects as po
 import io
+import json
 
 
-def initialize_storage(imported_prices):
-    date_start = dt.date(2024, 4, 1)
-    date_end = dt.date(2025, 3, 31)
-    storage = GasStorage('zásobníček', date_start, date_end)
+def initialize_storage():
 
-    storage.load_prices(imported_prices)
-    storage.load_attribute('wgv', 217079, date_start, date_end)
-    storage.load_attribute('wr', 3635, date_start, date_end)
-    storage.load_attribute('ir', 2181, date_start, date_end)
-    inj_curve = np.array([[0,81,84,88,92,96], 
-                        [81,84,88,92,96,100], 
-                        [100,96.682,92.258,87.834,83.41,78.956]])/100
-    storage.load_attribute('inj_curve', inj_curve, date_start, date_end)
-    wit_curve = np.array([[0,4,8,12,16,20,22], 
-                        [4,8,12,16,20,22,100], 
-                        [49.854,58.971,68.089,77.206,84.044,95.441,100]])/100
-    storage.load_attribute('wit_curve', wit_curve, date_start, date_end)
+    with open('zasobnik.json', 'r') as file:
+        json_data = json.load(file)
 
-    storage.set_initial_state(0)
-    storage.set_dates_to_empty_storage([date_end])
-    storage.set_injection_season([4,5,6,7,8,9])
-    storage.set_state_to_date({5: 0.05, 7: 0.3, 9: 0.6, 11: 0.9})
+    date_start = dt.date(2023, 12, 1)
+    date_end = dt.date(2026, 3, 31)
+    initial_state = 2078317
+
+    storage = GasStorage(json_data['GasStorageName'], date_start, date_end)
+
+    storage.load_prices(st.session_state.prices)
+    
+    for period in json_data['TimePeriods']:
+        period_start_date = dt.datetime.strptime(period['StartDate'], '%Y-%m-%d').date()
+        period_end_date = dt.datetime.strptime(period['EndDate'], '%Y-%m-%d').date()
+        if period_end_date >= date_start:
+            storage.load_attribute('wgv', period['WGV'], period_start_date, period_end_date)
+            storage.load_attribute('wr', period['WithdrawalRate'], period_start_date, period_end_date)
+            storage.load_attribute('ir', period['InjectionRate'], period_start_date, period_end_date)
+
+    storage.load_attribute('inj_curve', np.array(json_data['InjectionCurve'])/100, date_start, date_end)
+    storage.load_attribute('wit_curve', np.array(json_data['WithdrawalCurve'])/100, date_start, date_end)
+
+    storage.set_initial_state(initial_state)
+    storage.set_injection_season(json_data['InjectionSeason'])
+    storage.set_state_to_date({int(key): val for key, val in json_data['StatesToDate'].items()})
+
+    dates_to_empty_storage = []
+    for date in json_data['DatesToEmptyStorage']:
+        dates_to_empty_storage.append(dt.datetime.strptime(date, '%Y-%m-%d').date())
+    dates_to_empty_storage.append(date_end)
+    storage.set_dates_to_empty_storage(dates_to_empty_storage)
 
     storage.create_model()
 

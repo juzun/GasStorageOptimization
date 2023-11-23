@@ -16,6 +16,9 @@ if st.button('Initialize storage 2'):
     st.session_state.storages.append(initialize_storage2(st.session_state.prices))
     update_storage_labels()
 
+if st.button('Initialize storage'):
+    st.session_state.storages.append(initialize_storage())
+    update_storage_labels()
 
 for index, storage in enumerate(st.session_state.storages):
     col1, col2, col3 = st.columns((4,2,1))

@@ -36,8 +36,6 @@ with last_col:
 
 
 # Export of storages
-
-storages_labels = [storage.id for storage in st.session_state.storages]
 for (tab, storage) in zip(st.tabs(st.session_state.storage_labels), st.session_state.storages):
     with tab:
         st.subheader(storage.id)

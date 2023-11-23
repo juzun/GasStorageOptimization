@@ -2,7 +2,7 @@ import pandas as pd
 import datetime as dt
 import plotly.graph_objects as po
 
-def collect(solved_storages) -> tuple:
+def collect(solved_storages: list) -> tuple:
     date_min = min(solved_storages[0].dates)
     date_max = max(solved_storages[0].dates)
     for self in solved_storages:
