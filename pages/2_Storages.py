@@ -12,8 +12,6 @@ if st.button('Initialize storage 1'):
     st.session_state.storages.append(initialize_storage1(st.session_state.prices))
     update_storage_labels()
 
-st.write('proč to tu neníííííí')
-
 if st.button('Initialize storage 2'):
     st.session_state.storages.append(initialize_storage2(st.session_state.prices))
     update_storage_labels()
