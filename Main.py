@@ -14,6 +14,5 @@ def main():
         if st.session_state.session_initialized:
             st.info('There is a session running.')
 
-
 if __name__ == "__main__":
     main()
