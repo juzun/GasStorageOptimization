@@ -1,15 +1,19 @@
-from gs_optim import GasStorage
+from gas_tank.gs_optim import GasStorage
 import datetime as dt
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import streamlit as st
+import plotly.graph_objects as po
+import io
 
-def initialize_storage():
+
+def initialize_storage(imported_prices):
     date_start = dt.date(2024, 4, 1)
     date_end = dt.date(2025, 3, 31)
     storage = GasStorage('zásobníček', date_start, date_end)
 
-    storage.load_prices('prices.xlsx')
+    storage.load_prices(imported_prices)
     storage.load_attribute('wgv', 217079, date_start, date_end)
     storage.load_attribute('wr', 3635, date_start, date_end)
     storage.load_attribute('ir', 2181, date_start, date_end)
@@ -31,28 +35,22 @@ def initialize_storage():
 
     return storage
 
+def get_graph(storage) -> po.Figure:
+    storage.create_graph()
+    return storage.fig
 
-def graph(storage, show_fig: bool = True, path: Path = None):
-    storage.create_graph(show_fig=False)
-    if path is not None:
-        path = path.parent / (path.name + '.html')
-        storage.fig.write_html(path)
-
-def export_to_pdf(storage, path: Path = None):
-    if path is None:
-        path = f'{storage.id}_export.xlsx'
-    else:
-        path = path.parent / (path.name + '.xlsx')
-    with pd.ExcelWriter(path, mode='w', engine='xlsxwriter') as writer:
-        storage.daily_export[['Rok','M','W/I','Stav','Stav %','Max C']].to_excel(writer, sheet_name='data_daily', index=True, index_label='Datum')
-        storage.monthly_export[['Rok','M','W/I','Stav','Stav %']].to_excel(writer, sheet_name='data_monthly', index=False)
+def export_to_xlsx(storage) -> None:
+    buffer = io.BytesIO()
+    with pd.ExcelWriter('excel.xlsx', mode='w', engine='xlsxwriter') as writer:
+        storage.daily_export.to_excel(writer, sheet_name='data_daily', index=True, index_label='Datum')
+        storage.monthly_export.to_excel(writer, sheet_name='data_monthly', index=False)
         percent_format = writer.book.add_format({"num_format": "0%"})
         writer.sheets['data_daily'].set_column(5, 5, None, percent_format)
         writer.sheets['data_daily'].set_column(0, 0, 10)
         writer.sheets['data_monthly'].set_column(4, 4, None, percent_format)
-        print(f'Results exported to {storage.id}_export.xlsx')
+    return buffer
 
-def total_export_to_xlsx(path: Path = Path('total_export')):
+def total_export_to_xlsx(path: Path = Path('total_export')) -> None:
     path = path.parent / (path.name + '.xlsx')
     GasStorage.collect_all_storages()
     with pd.ExcelWriter(path, mode='w', engine='xlsxwriter') as writer:
@@ -64,8 +62,63 @@ def total_export_to_xlsx(path: Path = Path('total_export')):
         writer.sheets['data_daily'].set_column(0, 0, 10)
         print(f'Results exported to {path}.xlsx')
 
-def total_graph(show_fig: bool = True, path: Path = None):
-    GasStorage.create_total_graph(show_fig=True)
+def total_graph(show_fig: bool = True, path: Path = None) -> None:
+    GasStorage.create_total_graph(show_fig)
     if path is not None:
         path = path.parent / (path.name + '.html')
         GasStorage._fig.write_html(path)
+
+def import_prices(uploaded_file):
+    return pd.read_excel(uploaded_file, parse_dates=['date'], usecols=['date', 'price'])
+
+def reset_session_state():
+    st.session_state.session_initialized = True
+    st.session_state.prices = None
+    st.session_state.storages = []
+    st.session_state.solved = False
+    st.session_state.uploaded_file = None
+
+    st.info('Session initialized.')
+
+def check_session_initialization():
+    if 'session_initialized' not in st.session_state:
+        st.session_state.session_initialized = False
+        st.error('No session initialized.')
+        st.info("Go to 'Main' page and initialize the session.")
+        st.stop()
+    elif 'session_initialized' in st.session_state:
+        if st.session_state.session_initialized:
+            pass
+        else:
+            st.error('No session initialized.')
+            st.info("Go to 'Main' page and initialize the session.")
+            st.stop()
+
+def check_for_uploaded_prices():
+    if st.session_state.prices is not None:
+        pass
+    else:
+        st.error('No prices available.')
+        st.info("Go to 'Prices' page and upload a file with prices.")
+        st.stop()
+
+def check_for_initialized_storages():
+    if st.session_state.storages:
+        pass
+    else:
+        st.error('No storage initialized.')
+        st.info("Go to 'Storages' page and initialize a storage.")
+        st.stop()
+
+def check_for_solved_storages():
+    if st.session_state.solved:
+        pass
+    else:
+        st.error('No results to export.')
+        st.info("Go to 'Optimize' page and run the optimization.")
+        st.stop()
+
+def solve_button(storage):
+    for storage in st.session_state.storages:
+        storage.solve_model(solver_name='cplex', stream_solver=True)
+    st.session_state.solved = True
