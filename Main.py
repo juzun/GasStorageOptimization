@@ -1,9 +1,14 @@
 from gas_tank.utils import *
 
 
-def main(state=None):
+def main():
 
-    st.button('Start session', on_click=reset_session_state, help='Click this button to initialize or restart all needed variables.')
+    st.set_page_config(layout="centered")
+    check_session_initialization()
+
+    st.title('Main page')
+
+    st.button('Restart session', on_click=reset_session_state, help='Click this button to restart all variables.')
     
     if 'session_initialized' in st.session_state:
         if st.session_state.session_initialized:

@@ -211,6 +211,123 @@ m.bsd_months2 = pyo.Set(initialize=)
 #fig.add_trace(po.Scatter(x=index, y=bsd_wr, name='BSD WR', line_color='#bac52d', mode='lines'))
 
 
-Pandas xlsxwriter ticklabel_format
-    percent_format = writer.book.add_format({"num_format": "0%"})
-    writer.sheets['data_daily'].set_column(5, 5, None, percent_format)
+
+
+# ----------------------------------------------------------------------------
+# # Classmethods
+
+    _instances: list = []
+    _dates: List[dt.date] = []
+    _total_data: pd.DataFrame = None
+    _total_operations: Dict[dt.date, float] = {}
+    _total_max_operations: Dict[dt.date, float] = {}
+    _total_gs_state: Dict[dt.date, float] = {}
+    _total_wgv: Dict[dt.date, float] = {}
+
+    def __init__(self, name: str, date_start: dt.date, date_end: dt.date) -> None:
+        GasStorage._instances.append(self)
+
+    @classmethod
+    def collect_all_storages(cls) -> None:
+        if not cls._instances:
+            raise Exception('No objects initialized yet.')
+        for self in cls._instances:
+            if not self.solved:
+                raise Exception("One of the objects wasn't solved yet")
+        date_min = min(cls._instances[0].dates)
+        date_max = max(cls._instances[0].dates)
+        for self in cls._instances:
+            if min(self.dates) < date_min:
+                date_min = min(self.dates)
+            if max(self.dates) > date_max:
+                date_max = max(self.dates)
+
+        cls._dates = [date_min + dt.timedelta(days=i) for i in range(0,(date_max-date_min).days+1)]
+        cls._total_operations = {key: 0 for key in cls._dates}
+        cls._total_max_operations = {key: 0 for key in cls._dates}
+        cls._total_gs_state = {key: 0 for key in cls._dates}
+        cls._total_wgv = {key: 0 for key in cls._dates}
+        for self in cls._instances:
+            wgv_dict = self.get_dict_from_column('wgv')
+            for d in cls._dates:
+                if d in self.res_operations.keys():
+                    cls._total_operations[d] += self.res_operations[d]
+                if d in self.max_operations.keys():
+                    cls._total_max_operations[d] += self.max_operations[d]
+                if d in self.res_gs_state.keys():
+                    cls._total_gs_state[d] += self.res_gs_state[d]
+                if d in wgv_dict.keys():
+                    cls._total_wgv[d] += wgv_dict[d]
+        cls._total_data = pd.DataFrame(
+            list(zip(
+                list(cls._total_operations.values()),list(cls._total_gs_state.values()),
+                list(cls._total_max_operations.values()),list(cls._total_wgv.values()))),
+            index=pd.DatetimeIndex(cls._dates),
+            columns=['W/I','Stav','Max C', 'WGV'])
+        cls._total_data['yyyy-mm-dd'] = cls._total_data.index.date
+        cls._total_data['Rok'] = cls._total_data.index.year
+        cls._total_data['M'] = cls._total_data.index.month
+        cls._total_data['Stav %'] = cls._total_data['Stav']/cls._total_data['WGV']
+
+        cls._total_daily_export = pd.DataFrame(
+            cls._total_data[['Rok','M','W/I','Stav', 'Stav %','Max C', 'WGV']],
+            index=cls._dates)
+        total_daily_export_agg = cls._total_daily_export.groupby(['Rok','M']).agg(
+            w_i=('W/I','sum'), year=('Rok', 'min'), month=('M', 'min'), wgv=('WGV', 'min')
+        )
+        for self in cls._instances:
+            cls._total_daily_export[f'Stav {self.name}'] = self.daily_export['Stav']
+            cls._total_daily_export[f'W/I {self.name}'] = self.daily_export['W/I']
+            cls._total_daily_export[f'Max C {self.name}'] = self.daily_export['Max C']
+
+        gs_state_monthly = []
+        z0 = 0
+        for self in cls._instances:
+            if min(self.dates) == min(cls._dates):
+                z0 += self.z0
+        for i, val in enumerate(total_daily_export_agg.w_i.values):
+            if i == 0:
+                gs_state_monthly.append(z0 + val)
+                continue
+            gs_state_monthly.append(gs_state_monthly[i-1] + val)
+
+        cls._total_monthly_export = pd.DataFrame(    
+            list(zip(
+                total_daily_export_agg.year.values, total_daily_export_agg.month.values, 
+                total_daily_export_agg.w_i.values, gs_state_monthly, total_daily_export_agg.wgv
+            )),
+            columns=['Rok','M','W/I','Stav','WGV']
+        )
+        cls._total_monthly_export['Stav %'] = cls._total_monthly_export['Stav']/cls._total_monthly_export['WGV']
+
+        cls._total_monthly_export = cls._total_monthly_export[['Rok','M','W/I','Stav','Stav %']]
+        cls._total_daily_export = cls._total_daily_export[
+            ['Rok','M','W/I',*[f'W/I {self.name}' for self in cls._instances],'Stav','Stav %',*[f'Stav {self.name}' for self in cls._instances],
+                'Max C',*[f'Max C {self.name}' for self in cls._instances]]
+        ]
+
+    @classmethod
+    def create_total_graph(cls):
+        cls._fig = po.Figure()
+        cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_max_operations.values()), name='Max. operations', line_color='#ffa600', mode='lines'))
+        cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_operations.values()), name='Operations', fill='tozeroy', line_color='#74d576', mode='lines'))
+        cls._fig.add_trace(po.Scatter(x=cls._dates, y=list(cls._total_gs_state.values()), name='GS state', fill='tozeroy', line_color='#34dbeb', yaxis = 'y2'))
+        cls._fig.update_layout(
+            title = f'Total gas storage optimization',
+            xaxis_title = 'Date',
+            yaxis = dict(
+                title = 'Operations [MWh/day]'),
+            yaxis2 = dict(
+                title = "GS state [MWh]",
+                side = 'right',
+                overlaying = 'y',
+                titlefont = dict(color='#34dbeb'),
+                tickfont = dict(color='#34dbeb')),
+            legend = dict(
+                orientation = "v",
+                x = 1.06,
+                xanchor = 'left',
+                y = 1)
+        )
+        cls._fig.update_xaxes(fixedrange=False)
+        cls._fig.update_yaxes(zeroline=True, zerolinewidth=3, zerolinecolor='grey')
