@@ -176,11 +176,11 @@ def check_for_solved_storages() -> None:
         st.stop()
 
 def solve_button(storage) -> None:
-    storage.solve_model(solver_name='cplex', stream_solver=True)
+    storage.solve_model(solver_name='scip', stream_solver=True)
 
 def solve_all_button() -> None:
     for storage in st.session_state.storages:
-        storage.solve_model(solver_name='cplex', stream_solver=True)
+        storage.solve_model(solver_name='scip', stream_solver=True)
 
 def collect_storages():
     solved_storages = []
