@@ -1,26 +1,28 @@
-# Use Python 3.10 as the base image with minimal OS specifics
-FROM python:3.10
+FROM python:3.10-buster as builder
 
-# Install Poetry for Python dependency management
-RUN curl -sSL https://install.python-poetry.org | python3 - \
-    && . $HOME/.poetry/env \
-    && poetry --version
+ENV POETRY_VERSION=1.6.1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=true
 
-# Set the working directory inside the container to /app
+RUN pip install poetry==$POETRY_VERSION
+
 WORKDIR /app
 
-# Copy following two files to the container's /app directory
-# COPY pyproject.toml poetry.lock /app
+COPY pyproject.toml poetry.lock README.md /app
 
-# Copy everything from the local directory to the /app directory in the container
-COPY . /app
+RUN poetry install --without dev && poetry cache clear --all .
 
-# Configure Poetry not to create virtual enviroment and to install dependencies in pyproject.toml
-RUN poetry config virtualenvs.create false && \
-    poetry install --no-dev
 
-# Specify network port to use during runtime. Default port for Streamlit is 8501
+
+FROM python:3.10-slim-buster as runtime
+
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
+COPY main /app/main
+#COPY pyproject.toml poetry.lock README.md /app
+#RUN pip install poetry && poetry install && pip uninstall -y poetry
+
 EXPOSE 8501
 
-# Commands to run when the container starts
-CMD ["streamlit", "run", "your_app_file.py"]
+CMD ["streamlit", "run", "/app/main/Main.py"]

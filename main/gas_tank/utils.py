@@ -11,7 +11,7 @@ import json
 
 def initialize_storage():
 
-    with open('sources/zasobnik.json', 'r') as file:
+    with open('data/zasobnik.json', 'r') as file:
         json_data = json.load(file)
 
     date_start = dt.date(2023, 12, 1)
