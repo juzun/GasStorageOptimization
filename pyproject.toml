@@ -1,6 +1,9 @@
 [tool.mypy]
 ignore_missing_imports = true
 
+[tool.poetry.scripts]
+my_tests = "python3 -m unittest discover -s tests -v"
+
 [tool.poetry]
 name = "gas-optim"
 version = "0.1.0"
