@@ -4,7 +4,7 @@ import datetime as dt
 import plotly.graph_objects as po
 import pyomo.environ as pyo
 from pyomo.contrib import appsi
-from typing import List, Dict, Union, Literal, Tuple
+from typing import List, Dict, Union, Literal, Tuple, Optional
 import psutil
 
 
@@ -15,8 +15,8 @@ class GasStorage():
         self.id: str = name + '_' + dt.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')
         self.date_start: dt.date = date_start
         self.date_end: dt.date = date_end
-        self.attr: pd.DataFrame | None = None
-        self.model_vals: pd.DataFrame | None = None
+        self.attr: pd.DataFrame = pd.DataFrame()
+        self.model_vals: Optional[pd.DataFrame] = None
         self.__initialize_df()
         self.z0: int = 0
         self.empty_storage: bool = False
@@ -27,26 +27,35 @@ class GasStorage():
         self.withdrawal_idx: List[int] = []
         self.inj_curve_daily: Dict[Tuple[dt.date,int,str], float] = {}
         self.wit_curve_daily: Dict[Tuple[dt.date,int,str], float] = {}
-        self.mdl: pyo.ConcreteModel | None = None
-        self.slvr: Union[appsi.solvers.Cplex, appsi.solvers.Highs, None] = None
-        self.objective: float | None = None
-        self.results: Union[appsi.solvers.highs.HighsResults, appsi.solvers.cplex.CplexResults, None] = None
-        self.solved: bool | None = False
+        self.mdl: Optional[pyo.ConcreteModel] = None
+        self.slvr: Optional[Union[appsi.solvers.Cplex, appsi.solvers.Highs]] = None
+        self.objective: Optional[float] = None
+        self.results: Optional[Union[appsi.solvers.highs.HighsResults, appsi.solvers.cplex.CplexResults]] = None
+        self.solved: Optional[bool] = False
 
-        self.best_objective_bound: float | None = None
-        self.best_feasible: float | None = None
-        self.gap: float | None = None
+        self.best_objective_bound: Optional[float] = None
+        self.best_feasible: Optional[float] = None
+        self.gap: Optional[float] = None
     
     @property
     def dates(self) -> List[dt.date]:
+        '''
+        Maximum range of dates used in optimization.
+        '''
         return [self.date_start + dt.timedelta(days=i) for i in range(0,(self.date_end-self.date_start).days+1)]
     
     @property
     def curve_value_type(self) -> List[str]:
+        '''
+        Row values of injection/withdrawal curves.
+        '''
         return ['lower', 'upper', 'portion']
 
     @property
     def attr_lbls(self) -> List[str]:
+        '''
+        List of available attribute labels (used for checking valid labels, creating dataframe...)
+        '''
         return ['prices', 'wgv', 'ir', 'wr', 'inj_curve', 'wit_curve', 'm_const', 'bsd_wit_curve']
     
     @property
@@ -54,26 +63,39 @@ class GasStorage():
         return dt.timedelta(days=1)
     
     def __initialize_df(self) -> None:
+        '''
+        Initialize dataframe with all dates as index and create separate columns for year, month and yyyy-mm-dd date format
+        '''
         self.attr = pd.DataFrame(index=pd.DatetimeIndex(self.dates))
         self.attr['yyyy-mm-dd'] = self.attr.index.date
         self.attr['year'] = self.attr.index.year
         self.attr['month'] = self.attr.index.month
     
     def __transform_curve(self, curve_type: str) -> None:
+        '''
+        When loading attributes, injection and withdrawal curves (array attributes) need to be transformed in different way than other single-value attributes.
+        These array attributes are stored in ..._daily dictionary and ready to use in model.
+        '''
         curve_dict = self.get_dict_from_column(curve_type)
-        for i in self.dates:
-            if curve_type == 'inj_curve':
-                for j in range(len(self.injection_idx)):
-                    for l in range(3):
-                        self.inj_curve_daily[i, self.injection_idx[j], self.curve_value_type[l]] = curve_dict[i][l,j]
-            elif curve_type == 'wit_curve':
-                for k in range(len(self.withdrawal_idx)):
-                    for l in range(3):
-                        self.wit_curve_daily[i, self.withdrawal_idx[k], self.curve_value_type[l]] = curve_dict[i][l,k]
-            else:
-                raise Exception(f"Only following two types of curves are allowed: inj_curve, wit_curve.")
+        if isinstance(curve_dict, dict):
+            for i in self.dates:
+                if curve_type == 'inj_curve':
+                    for j in range(len(self.injection_idx)):
+                        for l in range(3):
+                            self.inj_curve_daily[i, self.injection_idx[j], self.curve_value_type[l]] = curve_dict[i][l,j]
+                elif curve_type == 'wit_curve':
+                    for k in range(len(self.withdrawal_idx)):
+                        for l in range(3):
+                            self.wit_curve_daily[i, self.withdrawal_idx[k], self.curve_value_type[l]] = curve_dict[i][l,k]
+                else:
+                    raise Exception(f"Only following two types of curves are allowed: inj_curve, wit_curve.")
+        else:
+            raise Exception('Injection and withdrawal curves must be of type np.ndarray with shape (3,)')
 
     def load_prices(self, imported_prices: pd.DataFrame) -> None:
+        '''
+        Based on dataframe with imported prices, column of daily prices is added to attributes dataframe self.attr.
+        '''
         self.prices_monthly = imported_prices
         self.prices_monthly = self.prices_monthly[self.prices_monthly['date'] >= pd.to_datetime(self.date_start.replace(day=1))]
         self.prices_monthly['year'] = self.prices_monthly['date'].dt.year
@@ -84,11 +106,24 @@ class GasStorage():
     def set_initial_state(self, z0:int) -> None:
         self.z0=z0
 
+    def set_state_to_date(self, bsd_state_to_date: Dict[int, float]) -> None:
+        self.bsd_state_to_date = bsd_state_to_date
+    
+    def set_injection_season(self, injection_season: List[int]) -> None:
+        self.injection_season = injection_season
+
     def set_dates_to_empty_storage(self, empty_on_dates: List[dt.date]) -> None:
+        '''
+        Setting desired dates to empty the storage from input.
+        '''
         self.empty_on_dates = empty_on_dates
         self.empty_storage = True if self.empty_on_dates else False
     
-    def load_attribute(self, attr_name: str, value: Union[np.array, int], date_from: dt.date, date_to: dt.date) -> None:
+    def load_attribute(self, attr_name: str, value: Union[np.ndarray, int], date_from: dt.date, date_to: dt.date) -> None:
+        '''
+        Loading all types of attributes (parameters of storage) into attributes dataframe self.attr. 
+        Single-valued attributes are stored straight to dataframe, array-valued (inj/wit curves) are transformed for the use of model.
+        '''
         self.check_attribute_lbl(attr_name)
         if attr_name not in self.attr:
             self.attr[attr_name] = None
@@ -97,36 +132,46 @@ class GasStorage():
         
         if attr_name == 'wgv':
             self.load_attribute('m_const', value + 100000, date_from, date_to)        
-        if attr_name == 'inj_curve':
-            self.injection_idx = np.arange(1,self.attr['inj_curve'].iloc[0].shape[1]+1,1)
+        elif attr_name == 'inj_curve':
+            self.injection_idx = list(np.arange(1,self.attr['inj_curve'].iloc[0].shape[1]+1,1))
             self.__transform_curve(attr_name)
-        if attr_name == 'wit_curve':
-            self.withdrawal_idx = np.arange(1,self.attr['wit_curve'].iloc[0].shape[1]+1,1)
+        elif attr_name == 'wit_curve':
+            self.withdrawal_idx = list(np.arange(1,self.attr['wit_curve'].iloc[0].shape[1]+1,1))
             self.__transform_curve(attr_name)
 
     def reset_attribute(self, attr_name: str) -> None:
+        '''
+        Reset given attribute in attributes dataframe to column with None values.
+        '''
         self.check_attribute_lbl(attr_name)
         self.attr[attr_name] = None
 
+    def remove_attribute(self, attr_name: str) -> None:
+        '''
+        Remove given attribute from attributes dataframe.
+        '''
+        if attr_name in self.attr:
+            self.attr = self.attr.drop(columns=[attr_name])
+
     def check_attribute_lbl(self, attr_name: str) -> None:
+        '''
+        Check, whether attribute name is valid.
+        '''
         if attr_name not in self.attr_lbls:
             raise Exception(f"Only following attributes are allowed: {', '.join(item for item in self.attr_lbls)}.")
     
-    def remove_attribute(self, attr_name: str) -> None:
-        if attr_name in self.attr:
-            self.attr = self.attr.drop(columns=[attr_name])
-    
-    def set_state_to_date(self, bsd_state_to_date: Dict[int, float]) -> None:
-        self.bsd_state_to_date = bsd_state_to_date
-    
-    def set_injection_season(self, injection_season: List[int]) -> None:
-        self.injection_season = injection_season
-
-    def get_dict_from_column(self, col_name: str) -> Dict[dt.date, np.array | int]:
+    def get_dict_from_column(self, col_name: str) -> dict:
+        '''
+        Return a column from attributes dataframe as dictionary for the use of model.
+        '''
         self.check_attribute_lbl(col_name)
         return pd.Series(self.attr[col_name], index=self.attr['yyyy-mm-dd']).to_dict()    
 
     def __mdl_initialize_sets(self) -> None:
+        '''
+        Initialize sets of model.
+        '''
+        assert self.mdl is not None
         self.mdl.i = pyo.Set(initialize=self.dates)
         self.mdl.j = pyo.Set(initialize=self.injection_idx)
         self.mdl.k = pyo.Set(initialize=self.withdrawal_idx)
@@ -134,6 +179,10 @@ class GasStorage():
         self.mdl.bsd_months = pyo.Set(initialize=list(self.bsd_state_to_date.keys()))
     
     def __mdl_initialize_params(self) -> None:
+        '''
+        Initialize parameters of model.
+        '''
+        assert self.mdl is not None
         self.mdl.p = pyo.Param(self.mdl.i, initialize=self.get_dict_from_column('prices'))
         self.mdl.wgv = pyo.Param(self.mdl.i, initialize=self.get_dict_from_column('wgv'))
         self.mdl.ir = pyo.Param(self.mdl.i, initialize=self.get_dict_from_column('ir'))
@@ -144,6 +193,10 @@ class GasStorage():
         self.mdl.bsd_state_to_date = pyo.Param(self.mdl.bsd_months, initialize=self.bsd_state_to_date)
 
     def __mdl_initialize_vars(self) -> None:
+        '''
+        Initialize variables of model.
+        '''
+        assert self.mdl is not None
         self.mdl.x = pyo.Var(self.mdl.i, domain=pyo.NonNegativeIntegers, initialize=0, name='x')
         self.mdl.y = pyo.Var(self.mdl.i, domain=pyo.NonNegativeIntegers, initialize=0, name='y')
         self.mdl.z = pyo.Var(self.mdl.i, domain=pyo.NonNegativeIntegers, initialize=0, name='z')
@@ -157,6 +210,10 @@ class GasStorage():
         self.mdl.u_wit = pyo.Var(self.mdl.i, self.mdl.k, domain=pyo.Binary, initialize=0, name='u_wit')
 
     def __mdl_def_constraints(self) -> None:
+        '''
+        Define constraints of model.
+        '''
+        assert self.mdl is not None
         self.mdl.constr_balance = pyo.Constraint(expr = sum(self.mdl.y[i] for i in self.mdl.i) <= self.z0 + sum(self.mdl.x[i] for i in self.mdl.i))
 
         self.mdl.constr_empty_storage = pyo.ConstraintList()
@@ -232,6 +289,9 @@ class GasStorage():
             self.mdl.constr_wit.add(self.mdl.y[i] <= self.mdl.wr[i]*sum(self.mdl.tab_wit[(i,k,'portion')]*self.mdl.t_wit[i,k] for k in self.mdl.k))
     
     def create_model(self) -> None:
+        '''
+        Create pyomo model.
+        '''
         self.mdl = pyo.ConcreteModel(name='OptimusGas')
         self.__mdl_initialize_sets()
         self.__mdl_initialize_params()
@@ -243,10 +303,13 @@ class GasStorage():
         self.__mdl_def_constraints()
 
     def solve_model(
-            self, solver_name: Literal['cplex','highs','scip'], time_limit: int = 3600, gap: float = None, 
-            stream_solver: bool = True, presolve_highs: Literal['off','choose','on'] = 'choose', presolve_scip: int = None
+            self, solver_name: Literal['cplex','highs','scip'], time_limit: int = 3600, gap: Optional[float] = None, 
+            stream_solver: bool = True, presolve_highs: Literal['off','choose','on'] = 'choose', presolve_scip: Optional[int] = None
         ) -> None:
-        if not self.mdl:
+        '''
+        Solve pyomo model.
+        '''
+        if self.mdl is None:
             self.create_model()
         self.solver_name = solver_name
         if self.solver_name == 'scip':
@@ -262,7 +325,10 @@ class GasStorage():
             self.termination_condition = self.results.solver.termination_condition
             if (self.termination_condition == pyo.TerminationCondition.optimal) or (self.results.solver.primal_bound is not None):
                 self.__extract_values_from_model()
-                self.objective = self.mdl.objective()
+                if self.mdl is not None:
+                    self.objective = self.mdl.objective()
+                else:
+                    self.objective = None
                 self.best_feasible_objective = self.results.solver.primal_bound
                 self.best_objective_bound = self.results.solver.dual_bound
                 self.gap = (self.best_objective_bound - self.best_feasible_objective) / self.best_feasible_objective
@@ -298,7 +364,10 @@ class GasStorage():
                 self.results.solution_loader.load_vars()
             if (self.termination_condition == appsi.base.TerminationCondition.optimal) or (self.results.best_feasible_objective is not None):
                 self.__extract_values_from_model()
-                self.objective = self.mdl.objective()
+                if self.mdl is not None:
+                    self.objective = self.mdl.objective()
+                else:
+                    self.objective = None
                 self.best_feasible_objective = self.results.best_feasible_objective
                 self.best_objective_bound = self.results.best_objective_bound
                 self.gap = (self.best_objective_bound - self.best_feasible_objective) / self.best_feasible_objective
@@ -312,6 +381,11 @@ class GasStorage():
                 raise Exception(f"Couldn't find any feasible solution.\nTermination condition: {self.termination_condition}")
         
     def __extract_values_from_model(self) -> None:
+        '''
+        Extract values from variables of a solved model to instance variables.
+        Also create monthly and daily export dataframe of these values.
+        '''
+        assert self.mdl is not None
         self.mdl.compute_statistics()
         self.statistics = self.mdl.statistics
 
@@ -337,17 +411,17 @@ class GasStorage():
                 list(self.res_gs_state.values()),list(self.max_operations.values()),list(self.attr['wgv']))),
             index=self.dates,
             columns=['Rok','M','W/I','Stav','Max C', 'WGV'])
+        self.daily_export['Stav %'] = self.daily_export['Stav']/self.daily_export['WGV']
+
         daily_export_agg = self.daily_export.groupby(['Rok','M']).agg(
             w_i=('W/I','sum'), year=('Rok', 'min'), month=('M', 'min'), wgv=('WGV', 'min')
         )
-        self.daily_export['Stav %'] = self.daily_export['Stav']/self.daily_export['WGV']
-
         gs_state = []
-        for i, val in enumerate(daily_export_agg.w_i.values):
-            if i == 0:
+        for j, val in enumerate(daily_export_agg.w_i.values):
+            if j == 0:
                 gs_state.append(self.z0 + val)
                 continue
-            gs_state.append(gs_state[i-1] + val)
+            gs_state.append(gs_state[j-1] + val)
         self.monthly_export = pd.DataFrame(    
             list(zip(
                 daily_export_agg.year.values, daily_export_agg.month.values, daily_export_agg.w_i.values, gs_state, daily_export_agg.wgv
@@ -357,6 +431,9 @@ class GasStorage():
         self.monthly_export['Stav %'] = self.monthly_export['Stav']/self.monthly_export['WGV']        
 
     def create_graph(self) -> None:
+        '''
+        Create graph of storage optimization.
+        '''
         self.fig = po.Figure()
         self.fig.add_trace(po.Scatter(x=self.dates, y=list(self.max_operations.values()), name='Max. operations', line_color='#ffa600', mode='lines'))
         self.fig.add_trace(po.Scatter(x=self.dates, y=list(self.res_operations.values()), name='Operations', fill='tozeroy', line_color='#74d576', mode='lines'))
