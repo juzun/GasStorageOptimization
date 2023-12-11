@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.image.name }}
+  namespace: {{ .Values.image.namespace }}
+  labels:
+    app: {{ .Values.image.name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.image.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.image.name }}
+    spec:
+      containers:
+      - name: {{ .Values.image.name }}-container
+        image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: {{ .Values.image.port }}
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+

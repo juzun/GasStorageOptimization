@@ -1,0 +1,28 @@
+apiVersion: v2
+
+# the version of the Helm chart (not the underlying application)
+# must follow nomenclature of Semantic Versioning 2 standard (https://semver.org/)
+version: 0.0.0
+
+# the version of the underlying application
+# does not have to comply with SemVer 2 standard (can also be names, etc.)
+appVersion: 0.0.0
+
+# description of the Helm chart (not the underlying application)
+description: A Helm chart for Kubernetes
+
+# type of Helm chart:
+# application = for actual deployment
+# library = base chart that other charts can include
+type: application
+
+# name of the underlying application
+name: gas-storage-optim
+
+# the version of the underlying application
+# appVersion: 
+
+# list of maintainers of the this project
+maintainers:
+  - name: Jakub Zapletal
+    email: j60851@eon.com

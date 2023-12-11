@@ -27,4 +27,4 @@ COPY src /app/src
 
 EXPOSE 8501
 
-CMD ["streamlit", "run", "/app/main/Main.py"]
+CMD ["streamlit", "run", "/app/src/Main.py"]

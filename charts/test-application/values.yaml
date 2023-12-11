@@ -1,0 +1,10 @@
+namespace: gas-storage-optim
+
+image:
+  repository:
+  tag: latest
+
+  name: gas-storage-optim
+  port: 8501
+
+replicaCount: 1
