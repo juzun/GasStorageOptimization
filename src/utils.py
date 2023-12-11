@@ -13,6 +13,7 @@ def initialize_storage():
     with open('data/zasobnik.json', 'r') as file:
         json_data = json.load(file)
 
+    # user input
     date_start = dt.date(2023, 12, 1)
     date_end = dt.date(2026, 3, 31)
     initial_state = 2078317
@@ -21,6 +22,7 @@ def initialize_storage():
 
     storage.load_prices(st.session_state.prices)
     
+    # json input
     for period in json_data['TimePeriods']:
         period_start_date = dt.datetime.strptime(period['StartDate'], '%Y-%m-%d').date()
         period_end_date = dt.datetime.strptime(period['EndDate'], '%Y-%m-%d').date()
