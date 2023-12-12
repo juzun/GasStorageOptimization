@@ -1,3 +1,9 @@
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.poetry.scripts]
+my_tests = "python3 -m unittest discover -s tests -v"
+
 [tool.poetry]
 name = "gas-optim"
 version = "0.1.0"
@@ -13,13 +19,16 @@ numpy = "^1.26.1"
 pandas = "^2.1.2"
 streamlit = "^1.28.1"
 openpyxl = "^3.1.2"
-highspy = "^1.5.3"
 xlsxwriter = "^3.1.9"
 nbformat = "^5.9.2"
+psutil = "^5.9.6"
+blinker = "^1.7.0"
+highspy = "^1.5.3"
 
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.26.0"
+mypy = "^1.7.1"
 
 [build-system]
 requires = ["poetry-core"]
