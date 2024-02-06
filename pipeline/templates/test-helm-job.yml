@@ -1,0 +1,26 @@
+# This job includes helm linting
+
+parameters:
+- name: chartPath
+  default: $(chartPath)
+
+jobs:
+- job:
+  displayName: 'Helm Chart: lint ${{ parameters.chartPath }}'
+  pool:
+    vmImage: '$(vmImageName)'
+
+  steps:
+  - task: HelmInstaller@1
+    displayName: 'Install Helm ${{ parameters.chartPath }}'
+    inputs:
+      helmVersion: 3.3.4
+      checkLatestHelmVersion: false
+      kubectlVersion: 1.15.10
+      checkLatestKubectl: false
+
+  - task: Bash@3
+    displayName: 'Lint Helm chart ${{ parameters.chartPath }}'
+    inputs:
+      targetType: 'inline'
+      script: 'helm lint ${{ parameters.chartPath }} --with-subcharts'

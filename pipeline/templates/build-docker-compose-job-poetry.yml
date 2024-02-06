@@ -1,0 +1,40 @@
+# This job includes building and pushing a docker image
+
+jobs:
+- job: dockerBuild
+  displayName: 'Docker compose: build/push'
+  pool:
+    vmImage: '$(vmImageName)'
+  steps:
+  - checkout: self
+    lfs: true
+
+  - template: ${{variables['System.DefaultWorkingDirectory']}}/pipeline/templates/set-variables-step.yml
+  - template: ${{variables['System.DefaultWorkingDirectory']}}/pipeline/templates/poetry-authenticate.yml
+
+  - task: DockerCompose@0
+    displayName: 'Build docker images'
+    # TODO: this condition is repeated in every build/push step, and also in every build stage in 
+    # every project's pipeline-ci. It might be necessary only on one place (e. g. the pipeline-ci),
+    # during next cleanup please explore if it can be ommitted here.
+    condition: or(startsWith(variables['build.sourceBranch'], 'refs/tags/'), eq(variables['Build.Reason'], 'PullRequest'))
+    inputs:
+      containerregistrytype: 'Container Registry'
+      dockerRegistryEndpoint : '$(containerRegistryName)'
+      dockerComposeFile: $(dockerComposePath)
+      action: 'Build services'
+      additionalImageTags: $(imageVersion)
+      arguments: --build-arg POETRY_HTTP_BASIC_AZURE_PASSWORD=$(feedToken)
+
+  - task: DockerCompose@0
+    displayName: 'Push docker images to Azure container registry'
+    # TODO: this condition is repeated in every build/push step, and also in every build stage in 
+    # every project's pipeline-ci. It might be necessary only on one place (e. g. the pipeline-ci),
+    # during next cleanup please explore if it can be ommitted here.
+    condition: or(startsWith(variables['build.sourceBranch'], 'refs/tags/'), eq(variables['Build.Reason'], 'PullRequest'))
+    inputs:
+      containerregistrytype: 'Container Registry'
+      dockerRegistryEndpoint : '$(containerRegistryName)'
+      dockerComposeFile: $(dockerComposePath)
+      action: 'Push services'
+      additionalImageTags: $(imageVersion)

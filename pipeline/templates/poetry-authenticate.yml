@@ -1,0 +1,13 @@
+steps:
+- task: PipAuthenticate@1
+  # Creates environment variable PIP_EXTRA_INDEX_URL containing auth credentials required for download
+  displayName: "Pip authenticate to artifact feed"
+  inputs:
+    # Project scoped feeds must include the project name in addition to the feed name
+    artifactFeeds: "portfolio-strategy-python"  # ???
+    onlyAddExtraIndex: true
+
+- script: |
+    export POETRY_HTTP_BASIC_AZURE_PASSWORD=`echo $PIP_EXTRA_INDEX_URL | sed -E 's/https:\/\/[a-zA-Z]+:(.*)@eon-seed.*/\1/'`
+    echo "##vso[task.setvariable variable=feedToken;]$POETRY_HTTP_BASIC_AZURE_PASSWORD"
+  displayName: 'Export token to artifact feed'

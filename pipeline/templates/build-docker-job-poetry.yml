@@ -1,0 +1,48 @@
+# This job includes building and pushing a docker image
+
+jobs:
+- job: dockerBuild
+  displayName: 'Docker image: build/push'
+  pool:
+    vmImage: '$(vmImageName)'
+  steps:
+  - checkout: self
+    lfs: true
+
+  - template: ${{variables['System.DefaultWorkingDirectory']}}/pipeline/templates/set-variables-step.yml
+  - template: ${{variables['System.DefaultWorkingDirectory']}}/pipeline/templates/poetry-authenticate.yml
+
+#  - task: Docker@2
+#    displayName: 'Login to ACR'
+#    inputs:
+#      command: login
+#      containerRegistry: '$(containerRegistryName)'
+
+  - task: Docker@2
+    displayName: 'Build docker image'
+    # TODO: this condition is repeated in every build/push step, and also in every build stage in 
+    # every project's pipeline-ci. It might be necessary only on one place (e. g. the pipeline-ci),
+    # during next cleanup please explore if it can be ommitted here.
+    # condition: or(startsWith(variables['build.sourceBranch'], 'refs/tags/'), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: or(startsWith(variables['build.sourceBranch'], 'refs/tags/'), eq(variables['Build.Reason'], 'IndividualCI'))
+    inputs:
+      command: build
+      arguments: --build-arg POETRY_HTTP_BASIC_AZURE_PASSWORD=$(feedToken)
+      repository: '$(applicationName)'
+      dockerfile: '$(dockerfilePath)'
+      containerRegistry: '$(containerRegistryName)'
+      tags: |
+        $(imageVersion)
+
+  - task: Docker@2
+    displayName: 'Push docker image to Azure container registry'
+    # TODO: this condition is repeated in every build/push step, and also in every build stage in 
+    # every project's pipeline-ci. It might be necessary only on one place (e. g. the pipeline-ci),
+    #condition: or(startsWith(variables['build.sourceBranch'], 'refs/tags/'), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: or(startsWith(variables['build.sourceBranch'], 'refs/tags/'), eq(variables['Build.Reason'], 'IndividualCI'))
+    inputs:
+      command: push
+      repository: '$(applicationName)'
+      containerRegistry: '$(containerRegistryName)'
+      tags: |
+        $(imageVersion)

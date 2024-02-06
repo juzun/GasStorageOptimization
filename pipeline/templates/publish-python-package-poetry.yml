@@ -1,0 +1,25 @@
+jobs:
+- job: publish_package
+  displayName: 'Application: publish python package'
+  pool:
+    vmImage: '$(vmImageName)'
+  steps:
+  - task: UsePythonVersion@0  # make sure that proper Python version is installed in the worker
+    displayName: 'Determine Python version'
+    inputs:
+      versionSpec: '$(pythonVersion)'
+      architecture: 'x64'
+  - task: TwineAuthenticate@1
+    inputs:
+      artifactFeed: '$(packagingFeedName)'
+    displayName: 'Twine Authenticate'
+  - script: |
+      python3 -m pip install -U pip
+      python3 -m pip install poetry==$(poetryVersion)
+    displayName: 'Install poetry'
+  - script: |
+      export POETRY_PYPI_TOKEN_EMDP=$(grep "^password" "$PYPIRC_PATH" | cut -d "=" -f 2)
+      export POETRY_REPOSITORIES_EMDP_URL='$(packagingFeedUrl)'
+      poetry build
+      poetry publish -r emdp
+    displayName: 'Build and publish python package'

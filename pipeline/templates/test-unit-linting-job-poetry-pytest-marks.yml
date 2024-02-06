@@ -1,0 +1,61 @@
+jobs:
+- job: LintingTypingTestStage
+  displayName: 'Application: linting, typing, testing (code coverage), pip-audit'
+  pool:
+    vmImage: '$(vmImageName)'
+  steps:
+  - task: UsePythonVersion@0
+    displayName: 'Specify Python version'
+    inputs:
+      versionSpec: '$(pythonVersion)'
+      architecture: 'x64'
+  - checkout: self
+    lfs: true
+  - template: ${{variables['System.DefaultWorkingDirectory']}}/pipeline/templates/poetry-authenticate.yml
+
+  - script: |
+      python3 -m pip install -U pip
+      python3 -m pip install poetry==$(poetryVersion)
+      export POETRY_HTTP_BASIC_AZURE_PASSWORD=`echo $PIP_EXTRA_INDEX_URL | sed -E 's/https:\/\/[a-zA-Z]+:(.*)@eon-seed.*/\1/'`
+      poetry install $(if [[ -n "$(poetryExtras)" ]]; then echo --extras $(poetryExtras) ; fi)
+    displayName: 'Install requirements with poetry'
+
+  - script: |
+      poetry run pip-audit $(for vuln_id in $(pipAuditIgnoreVulnerabilities) ; do echo --ignore-vuln $vuln_id; done)
+    displayName: 'Check virtual environment for known vulnerabilities'
+
+  - script: |
+      poetry run flake8 . 
+    displayName: 'Flake8 check (linting)'
+
+  - script: |
+      poetry run mypy $(pythonLintFolder) $(if [[ "$(useMypyTests)" -eq 1 ]]; then echo $(pythonTestFolder) ; fi)
+    displayName: 'Mypy check (typing)'
+
+  - script: |
+      export SOLVER_PATH=$(Pipeline.Workspace)/s/$(PathToSolver)
+      echo "##vso[task.setvariable variable=PATH]$PATH:$SOLVER_PATH"
+    displayName: 'Setting PATH to solver'
+
+  - script: |
+      sudo apt-get update -y
+      sudo apt-get install -y --no-install-recommends libopenblas-dev libtbb2
+      sudo apt-get clean
+    displayName: 'Installing solver dependencies'
+
+  - script: |
+       poetry run pytest $(pythonTestFolder)
+    displayName: 'Run unit tests with pytest'
+
+  - task: PublishTestResults@2
+    displayName: 'Publish test results'
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: '**/test-*.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'

@@ -1,0 +1,261 @@
+[
+    {
+        "GasStorageName": "RWE",
+        "InjectionSeason": [4, 5, 6, 7, 8, 9],
+        "StatesToDate": {"5": 0.05, "7": 0.3, "9": 0.6, "11": 0.9},
+        "DatesToEmptyStorage": [],
+        "DefaultTimeLimit": 3600,
+        "InjectionCurve": [
+            [0,8,16,48,75,82,91,96],
+            [8,16,48,75,82,91,96,100],
+            [50,75,100,93,80,65,55,20]
+        ],
+        "WithdrawalCurve": [
+            [0,3,15,35,72,85],
+            [3,15,35,72,85,100],
+            [18,53,78,100,73,40]
+        ],
+        "TimePeriods": [
+            {
+                "StartDate": "2023-04-01",
+                "EndDate": "2024-03-31",
+                "WGV": 2378317,
+                "InjectionRate": 23648.928,
+                "WithdrawalRate": 31863.111
+            },
+            {
+                "StartDate": "2024-04-01",
+                "EndDate": "2025-03-31",
+                "WGV": 1916800,
+                "InjectionRate": 21438,
+                "WithdrawalRate": 28635
+            },
+            {
+                "StartDate": "2025-04-01",
+                "EndDate": "2026-03-31",
+                "WGV": 500000,
+                "InjectionRate": 5160,
+                "WithdrawalRate": 7080
+            }
+        ]
+    },
+
+    {
+        "GasStorageName": "RWE_P",
+        "InjectionSeason": [4, 5, 6, 7, 8, 9],
+        "StatesToDate": {"5": 0.05, "7": 0.3, "9": 0.6, "11": 0.9},
+        "DatesToEmptyStorage": [],
+        "DefaultTimeLimit": 3600,
+        "InjectionCurve": [
+            [0,8,16,48,75,82,91,96],
+            [8,16,48,75,82,91,96,100],
+            [50,75,100,93,80,65,55,20]
+        ],
+        "WithdrawalCurve": [
+            [0,3,15,35,72,85],
+            [3,15,35,72,85,100],
+            [18,53,78,100,73,40]
+        ],
+        "TimePeriods": [
+            {
+                "StartDate": "2023-04-01",
+                "EndDate": "2024-03-31",
+                "WGV": 400000,
+                "InjectionRate": 4600,
+                "WithdrawalRate": 6550
+            },
+            {
+                "StartDate": "2024-04-01",
+                "EndDate": "2025-03-31",
+                "WGV": 400000,
+                "InjectionRate": 4200,
+                "WithdrawalRate": 5550
+            }
+        ]
+    },
+    {
+        "GasStorageName": "RWE_Q",
+        "InjectionSeason": [4, 5, 6, 7, 8, 9],
+        "StatesToDate": {"5": 0.05, "7": 0.3, "9": 0.6, "11": 0.9},
+        "DatesToEmptyStorage": [],
+        "DefaultTimeLimit": 3600,
+        "InjectionCurve": [
+            [0,8,16,48,75,82,91,96],
+            [8,16,48,75,82,91,96,100],
+            [50,75,100,93,80,65,55,20]
+        ],
+        "WithdrawalCurve": [
+            [0,3,15,35,72,85],
+            [3,15,35,72,85,100],
+            [18,53,78,100,73,40]
+        ],
+        "TimePeriods": [
+            {
+                "StartDate": "2023-04-01",
+                "EndDate": "2024-03-31",
+                "WGV": 400000,
+                "InjectionRate": 4180,
+                "WithdrawalRate": 5500
+            },
+            {
+                "StartDate": "2024-04-01",
+                "EndDate": "2025-03-31",
+                "WGV": 400000,
+                "InjectionRate": 4343,
+                "WithdrawalRate": 6086
+            }
+        ]
+    },
+    {
+        "GasStorageName": "RWE_R",
+        "InjectionSeason": [4, 5, 6, 7, 8, 9],
+        "StatesToDate": {"5": 0.05, "7": 0.3, "9": 0.6, "11": 0.9},
+        "DatesToEmptyStorage": [],
+        "DefaultTimeLimit": 3600,
+        "InjectionCurve": [
+            [0,8,16,48,75,82,91,96],
+            [8,16,48,75,82,91,96,100],
+            [50,75,100,93,80,65,55,20]
+        ],
+        "WithdrawalCurve": [
+            [0,3,15,35,72,85],
+            [3,15,35,72,85,100],
+            [18,53,78,100,73,40]
+        ],
+        "TimePeriods": [
+            {
+                "StartDate": "2023-04-01",
+                "EndDate": "2024-03-31",
+                "WGV": 400000,
+                "InjectionRate": 4720,
+                "WithdrawalRate": 6400
+            },
+            {
+                "StartDate": "2024-04-01",
+                "EndDate": "2025-03-31",
+                "WGV": 400000,
+                "InjectionRate": 4410,
+                "WithdrawalRate": 5910
+            }
+        ]
+    },
+    {
+        "GasStorageName": "RWE_S",
+        "InjectionSeason": [4, 5, 6, 7, 8, 9],
+        "StatesToDate": {"5": 0.05, "7": 0.3, "9": 0.6, "11": 0.9},
+        "DatesToEmptyStorage": [],
+        "DefaultTimeLimit": 3600,
+        "InjectionCurve": [
+            [0,8,16,48,75,82,91,96],
+            [8,16,48,75,82,91,96,100],
+            [50,75,100,93,80,65,55,20]
+        ],
+        "WithdrawalCurve": [
+            [0,3,15,35,72,85],
+            [3,15,35,72,85,100],
+            [18,53,78,100,73,40]
+        ],
+        "TimePeriods": [
+            {
+                "StartDate": "2023-04-01",
+                "EndDate": "2024-03-31",
+                "WGV": 523317,
+                "InjectionRate": 5919.741,
+                "WithdrawalRate": 8133.891
+            },
+            {
+                "StartDate": "2024-04-01",
+                "EndDate": "2025-03-31",
+                "WGV": 350000,
+                "InjectionRate": 4255,
+                "WithdrawalRate": 5840
+            }
+        ]
+    },
+    {
+        "GasStorageName": "RWE_TK",
+        "InjectionSeason": [4, 5, 6, 7, 8, 9],
+        "StatesToDate": {"5": 0.05, "7": 0.3, "9": 0.6, "11": 0.9},
+        "DatesToEmptyStorage": [],
+        "DefaultTimeLimit": 3600,
+        "InjectionCurve": [
+            [0,8,16,48,75,82,91,96],
+            [8,16,48,75,82,91,96,100],
+            [50,75,100,93,80,65,55,20]
+        ],
+        "WithdrawalCurve": [
+            [0,3,15,35,72,85],
+            [3,15,35,72,85,100],
+            [18,53,78,100,73,40]
+        ],
+        "TimePeriods": [
+            {
+                "StartDate": "2023-04-01",
+                "EndDate": "2024-03-31",
+                "WGV": 655000,
+                "InjectionRate": 4229.187,
+                "WithdrawalRate": 5279.22
+            },
+            {
+                "StartDate": "2024-04-01",
+                "EndDate": "2025-03-31",
+                "WGV": 366800,
+                "InjectionRate": 4230,
+                "WithdrawalRate": 5249
+            }
+        ]
+    },
+    {
+        "GasStorageName": "MGS",
+        "InjectionSeason": [4, 5, 6, 7, 8, 9],
+        "StatesToDate": {"5": 0.05, "7": 0.3, "9": 0.6, "11": 0.9},
+        "DatesToEmptyStorage": [],
+        "DefaultTimeLimit": 1800,
+        "InjectionCurve": [
+            [0,81,84,88,92,96], 
+            [81,84,88,92,96,100], 
+            [100,96.682,92.258,87.834,83.41,78.956]
+        ],
+        "WithdrawalCurve": [
+            [0,4,8,12,16,20,22], 
+            [4,8,12,16,20,22,100], 
+            [49.854,58.971,68.089,77.206,84.044,95.441,100]
+        ],
+        "TimePeriods": [
+            {
+                "StartDate": "2024-04-01",
+                "EndDate": "2025-03-31",
+                "WGV": 217080,
+                "InjectionRate": 2181,
+                "WithdrawalRate": 3635
+            }
+        ]
+    },
+
+    {
+        "GasStorageName": "MND",
+        "InjectionSeason": [4, 5, 6, 7, 8, 9],
+        "StatesToDate": {"5": 0.05, "7": 0.3, "9": 0.6, "11": 0.9},
+        "DatesToEmptyStorage": [],
+        "DefaultTimeLimit": 1800,
+        "InjectionCurve": [
+            [0], 
+            [100], 
+            [100]
+        ],
+        "WithdrawalCurve": [
+            [0], 
+            [100], 
+            [100]
+        ],
+        "TimePeriods": [
+            {
+                "StartDate": "2024-01-01",
+                "EndDate": "2024-03-31",
+                "WGV": 55000,
+                "InjectionRate": 612,
+                "WithdrawalRate": 917
+            }
+        ]
+    }
+]

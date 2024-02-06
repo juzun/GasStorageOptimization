@@ -1,0 +1,21 @@
+# These steps set the imageVersion and chartVersion in some specific cases
+
+steps:
+- bash: |
+    GIT_TAG=$(git describe --exact-match $(Build.SourceVersion))
+    if [[ ! $GIT_TAG =~ ^(([0-9]+)(\.([0-9]+))*)$ ]]; then
+      echo "Pipeline was triggered by tagging event, but no SemVer tag. Leaving chart version at: 0.0.0"
+    else
+      echo "Pipeline was triggered by tagging event in SemVer. Setting chart version to the git tag of this build: $GIT_TAG"
+      echo "##vso[task.setvariable variable=chartVersion]$GIT_TAG"
+    fi
+  displayName: 'Set the chartVersion variable to the latest tag if the pipeline was started from a tagging event'
+  condition: startsWith(variables['build.sourceBranch'], 'refs/tags/')
+
+- bash: |
+    VALUE=$(Build.BuildNumber)
+    echo "Pipeline was triggered without tagging. Setting image version to the BuildNumber of this build: $(Build.BuildNumber)"
+    echo "##vso[task.setvariable variable=imageVersion]$VALUE"
+    echo "##vso[task.setvariable variable=chartVersion]$VALUE"
+  displayName: 'Set the imageVersion and the chartVersion variable to the BuildNumber if the pipeline was started from a pull request but not a tagging event'
+  condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
