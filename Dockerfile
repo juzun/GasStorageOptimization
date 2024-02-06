@@ -18,13 +18,15 @@ RUN apt-get update -y && \
     apt-get install -y --no-install-recommends libopenblas-dev libtbb2 && \
     apt-get clean
 
+WORKDIR /app
+
 ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV PATH="/app/src/solver/SCIPOptSuite-8.0.4-Linux/bin:${PATH}"
+ENV PATH="/app/src/data:${PATH}"
 
 COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
 COPY src /app/src/
-COPY .env .envrc /app/
 
 EXPOSE 8501
 

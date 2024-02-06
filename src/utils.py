@@ -1,7 +1,8 @@
 from gas_storage_optim.gs_optim import GasStorage
 from gas_storage_optim.gs_optim_tools import collect
-from authentication.msal_auth import streamlit_authenticate
-from config import ALLOWED_IDS
+# from authentication.msal_auth import streamlit_authenticate
+
+# from config import ALLOWED_IDS
 from typing import Tuple
 import datetime as dt
 import numpy as np
