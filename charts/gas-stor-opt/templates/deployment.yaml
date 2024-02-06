@@ -1,0 +1,91 @@
+{{- $root := . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}-deployment
+  namespace: {{ .Values.namespace }}
+
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}
+
+    spec:
+      {{- if .Values.deploymentSecurityContextEnabled }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+      {{- end }}
+
+      containers:
+      - name: {{ .Values.appName }}-container
+        image: {{ .Values.image }}
+        ports:
+        - containerPort: {{ .Values.containerPort }}
+        
+        {{- if or .Values.secretEnabled .Values.AzureAppConfigurationManualEnabled }}
+        env:
+          {{- if .Values.secretEnabled }}
+          {{- range .Values.secretAsEnv }}
+          - name: {{ .name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ $root.Values.appName }}-secret
+                key: {{ .key }}
+          {{- end }}  
+          {{- end }}
+          {{- if .Values.AzureAppConfigurationManualEnabled }}
+          {{- range .Values.reconfiguredEnv }}
+          - name: {{ .name }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ $root.Values.appName }}-config-map
+                key: {{ .key }}
+          {{- end }}      
+          {{- end }}
+        {{- end }}
+
+        {{- if .Values.secretProviderClassEnabled }}
+        volumeMounts:
+        - name: secrets-store01-inline
+          mountPath: {{ .Values.secretMountPath }}
+          readOnly: true
+        {{- end }}
+
+        {{- if .Values.deploymentResourcesEnabled }}
+        resources:
+           requests:
+             memory: {{ .Values.memoryRequest }}
+             cpu: {{ .Values.cpuRequest }}
+           limits:
+             memory: {{ .Values.memoryLimit }}
+             {{- if .Values.deploymentCpuLimitEnable }}
+             cpu: {{ .Values.cpuLimit }}
+             {{- end }}
+        {{- end }}
+
+        {{- if .Values.deploymentSecurityContextEnabled }}
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        {{- end }}
+
+      {{- if .Values.secretProviderClassEnabled }}
+      volumes:
+        - name: secrets-store01-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "{{ .Values.appName }}-secret-provider-class"
+      {{- end }}

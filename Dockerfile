@@ -23,7 +23,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV PATH="/app/src/solver/SCIPOptSuite-8.0.4-Linux/bin:${PATH}"
 
 COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
-COPY src /app/src
+COPY src /app/src/
+COPY .env .envrc /app/
 
 EXPOSE 8501
 

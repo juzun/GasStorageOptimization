@@ -1,0 +1,62 @@
+trigger:
+  branches:
+    include:
+    - '*'
+  tags:
+    include:
+    - '*'
+
+
+resources:
+  repositories:
+  - repository: self
+
+
+variables:
+- template: pipeline/templates/vars.yaml
+- name: applicationName
+  value: 'gas-stor-opt'
+- name: pythonLintFolder
+  value: 'src/'
+- name: pythonTestFolder
+  value: 'tests/'
+- name: useMypyTests
+  value: '1'
+- name: pytestMarks
+  value: '"not nothing"' # "not nothing" is default dummy value presumed not to be applicable anywhere.
+- name: additionalHelmUpgradeCLIOptions
+  value: |
+    --set images.sharedEnv.AAD_CLIENT_ID="" \
+    --set images.sharedEnv.AAD_CLIENT_SECRET="" \
+    --set images.sharedEnv.AAD_TENANT_ID="" \
+    --set images.sharedEnv.ALLOWED_IDS="" \
+    --set images.sharedEnv.LOGIN_REDIRECT_BASE_URL="http://localhost:8501/" \
+    --set images.sharedEnv.LOGOUT_REDIRECT_BASE_URL="http://localhost:8501/" \
+- name: pipAuditIgnoreVulnerabilities
+  value: 'PYSEC-2023-238'
+  #to be deleted once the pyarrow is fixed
+
+
+stages:
+- stage: testStage
+  displayName: 'Tests'
+  condition: not(and(contains(variables['build.sourceBranch'], 'refs/heads/') , contains(variables['build.SourceVersionMessage'], '[skip ci on heads]')))
+  
+  jobs:
+  - template: pipeline/templates/test-unit-linting-job-poetry-pytest-marks.yml
+  - template: pipeline/templates/test-helm-job.yml
+    
+- stage: buildStage
+  displayName: 'Build'
+  condition: and(succeeded(), startsWith(variables['build.sourceBranch'], 'refs/tags/'))
+  dependsOn: testStage
+  jobs:
+  - template: pipeline/templates/build-docker-job-poetry.yml
+  - template: pipeline/templates/build-helm-job.yml
+
+- stage: deployStage
+  displayName: 'Deploy'
+  condition: and(succeeded(), startsWith(variables['build.sourceBranch'], 'refs/tags/'))
+  dependsOn: buildStage
+  jobs:
+  - template: pipeline/templates/deploy-helm-aks.yml

@@ -1,0 +1,4 @@
+[flake8]
+max_line_length = 120
+exclude = .git,__pycache__,.venv,*/ipython_config.py,docs,notebooks,build,dist
+ignore = E501, W503, W504

@@ -1,0 +1,63 @@
+# This job builds documentation using Sphinx.
+jobs:
+- job:
+  displayName: 'Build & publish documentation'
+  pool:
+    vmImage: '$(vmImageName)'
+  steps:
+  - checkout: self
+    lfs: true
+    path: self
+  - checkout: doc_deployment
+    lfs: true
+    persistCredentials: true
+    path: doc_target
+
+  - task: UsePythonVersion@0
+    displayName: 'Specify Python version'
+    inputs:
+      versionSpec: '$(pythonVersion)'
+      architecture: 'x64'
+
+  - template: ${{variables['System.DefaultWorkingDirectory']}}/pipeline/templates/poetry-authenticate.yml
+  - script: |
+      python3 -m pip install -U pip
+      python3 -m pip install poetry==$(poetryVersion)
+      export POETRY_HTTP_BASIC_AZURE_PASSWORD=`echo $PIP_EXTRA_INDEX_URL | sed -E 's/https:\/\/[a-zA-Z]+:(.*)@eon-seed.*/\1/'`
+      cd $(Pipeline.Workspace)/self && \
+        poetry install $(if [[ -n "$(poetryExtras)" ]]; then echo --extras $(poetryExtras) ; fi)
+    displayName: 'Install requirements with poetry'
+
+  - script: |
+      cd $(Pipeline.Workspace)/self/docs/ && poetry run make html
+    displayName: 'Build sphinx documentation'
+
+  - script: |
+      git config --global user.email "do-not-reply@eon.com"
+      git config --global user.name "Portfolio Strategy autodoc pipeline"
+      
+      # "re-attach" git HEAD
+      # Why: DevOps checks out specific commit, to prevent race conditions while
+      # CI is being scheduled. That moves git to "detached head" state, where
+      # it is not possible to push. Since we want to push new content, we need
+      # to switch it back.
+      cd $(Pipeline.Workspace)/doc_target/ && \
+        git remote update && \
+        git fetch --all && \
+        git checkout --track origin/master
+
+      target_folder=$(Pipeline.Workspace)/doc_target/docs/source/projects/$(applicationName)
+
+      rm -rf $target_folder
+      mkdir -p $target_folder
+      cp -r  $(Pipeline.Workspace)/self/docs/_build/html/* $target_folder/
+      cd $target_folder && \
+        git add . && git commit -m "autodoc update $(applicationName)"
+
+      # to avoid installing another poetry environment (for doc-target repo),
+      # let's use self-venv to bump new version. If this breaks in future,
+      # just cd into $(Pipeline.Workspace)/doc_target, run poetry install
+      # and usual poetry run bumpver ... without the pipe to bash hack.
+      cd $(Pipeline.Workspace)/self && \
+        echo 'cd $(Pipeline.Workspace)/doc_target && bumpver update --patch' | poetry run bash
+    displayName: 'Push documentation to doc-repo'

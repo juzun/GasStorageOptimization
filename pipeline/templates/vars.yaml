@@ -1,0 +1,38 @@
+# This file contains variables shared by pipelines.
+
+variables:
+  System.Debug: true
+  azureSubscription: 'RUN, EE Data Platform (EMDP), PSP 9914.P01140.002.80'
+  azureResourceManagerServicePrincipal: 'dat-q-aks-02-czpfm-prod'
+  azureSubscriptionId: 'da80dbc4-7dd6-4833-b66e-f6dbbbe42ece'
+  azureResourceGroup: 'dat-qp-czpfm-01'
+  kubernetesCluster: 'dat-q-aks-01'
+  kubernetesNamespace: 'czpfm-prod'
+#   certificate: 'letsencrypt-emenps'  # ???
+#   domainName: 'datqaks01.westeurope.cloudapp.azure.com'
+  containerRegistryName: 'datqpczpfmacr01-service_conn'
+  containerRegistryFullPath: 'datqpczpfmacr01.azurecr.io'
+#   akvVaultName: 'dat-emen-akv-ps'   # ???
+
+  # comma separated list of variables to be pulled from AKV during deploy stage:
+  akvSecretsToPull: 
+
+  # additional options for helm upgrade, e. g. to set env variables, propagate AKV secrets etc.
+  additionalHelmUpgradeCLIOptions: ''
+
+  chartPath: 'charts/$(applicationName)'
+  pythonTestFolder: 'tests/'
+  pythonLintFolder: 'src/'
+  pathToSolver: 'src/solver/SCIPOptSuite-8.0.4-Linux/bin'
+  vmImageName: 'ubuntu-latest'
+  dockerfilePath: 'Dockerfile'
+  #dockerComposePath: 'docker-compose.yml'  # ???
+  imageVersion: $(Build.SourceBranchName)
+  chartVersion: 0.0.0
+  useMypyTests: 1
+  poetryExtras: ''
+  pipAuditIgnoreVulnerabilities: ''
+  poetryVersion: '1.3.1'
+  pythonVersion: '3.10'
+  #packagingFeedName: 'portfolio-strategy-python'   # ???
+  #packagingFeedUrl: 'https://pkgs.dev.azure.com/eon-seed/_packaging/$(packagingFeedName)/pypi/upload'  # ???

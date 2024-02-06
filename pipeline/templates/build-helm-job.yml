@@ -1,0 +1,43 @@
+# This job includes building and pushing a docker image
+
+parameters:
+- name: chartPath
+  default: $(chartPath)
+
+jobs:
+- job:
+  displayName: 'Helm chart: package/push ${{ parameters.chartPath }}'
+  pool:
+    vmImage: '$(vmImageName)'
+  steps:
+
+  - template: ${{variables['System.DefaultWorkingDirectory']}}/pipeline/templates/set-variables-step.yml
+
+  - task: HelmInstaller@1
+    displayName: 'Install Helm ${{ parameters.chartPath }}'
+    inputs:
+      helmVersion: 3.3.4
+      checkLatestHelmVersion: false
+      kubectlVersion: 1.15.10
+      checkLatestKubectl: false
+
+  - task: HelmDeploy@0
+    displayName: 'Create the Helm package ${{ parameters.chartPath }}'
+    inputs:
+      command: package
+      chartPath: '${{ parameters.chartPath }}'
+      arguments: '--version $(chartVersion) --app-version $(imageVersion)'
+
+  - task: AzureCLI@2
+    displayName: 'Push the Helm package ${{ parameters.chartPath }}'
+    condition: or(startsWith(variables['build.sourceBranch'], 'refs/tags/'), eq(variables['Build.Reason'], 'PullRequest'))
+    # TODO: this condition is repeated in every build/push step, and also in every build stage in 
+    # every project's pipeline-ci. It might be necessary only on one place (e. g. the pipeline-ci),
+    # during next cleanup please explore if it can be ommitted here.
+    inputs:
+      azureSubscription: '$(azureResourceManagerServicePrincipal)'
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        # `helm show chart` and following egrep/sed extracts ACR repository name from chart name.
+        az acr helm push $(System.ArtifactsDirectory)/`helm show chart ${{ parameters.chartPath }} | egrep '^name:' | sed -r 's/^name:\s//'`-*.tgz --name $(containerRegistryName) --force;

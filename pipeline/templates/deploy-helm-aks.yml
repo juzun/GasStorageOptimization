@@ -1,0 +1,45 @@
+jobs:
+- job: 'Deployment'
+  displayName: 'Deploy the application to AKS'
+  pool:
+    vmImage: '$(vmImageName)'
+  steps:
+    - template: ${{variables['System.DefaultWorkingDirectory']}}/pipeline/templates/set-variables-step.yml
+    - task: HelmInstaller@0
+      displayName: 'Install Helm 3.3.4'
+      inputs:
+        helmVersion: 3.3.4
+        checkLatestHelmVersion: false
+
+    - task: AzureCLI@2
+      displayName: 'Add Helm repository from ACR'
+      inputs:
+        azureSubscription: '$(azureResourceManagerServicePrincipal)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: 'az acr helm repo add --name $(containerRegistryName) --subscription ''$(azureSubscriptionId)'';'
+    
+    - task: AzureKeyVault@2
+      displayName: 'Download secrets from KeyVault'
+      condition: variables['akvSecretsToPull']
+      inputs:
+        azureSubscription: '$(azureResourceManagerServicePrincipal)'
+        KeyVaultName: '$(akvVaultName)'
+        SecretsFilter: '$(akvSecretsToPull)'
+        RunAsPreJob: false
+
+    - task: AzureCLI@2
+      displayName: 'Install/upgrade Helm chart'
+      inputs:
+        azureSubscription: '$(azureResourceManagerServicePrincipal)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az aks get-credentials -n $(kubernetesCluster) -g $(azureResourceGroup)
+          helm upgrade --namespace $(kubernetesNamespace) --version $(chartVersion) \
+            --install --wait $(applicationName) $(containerRegistryName)/$(applicationName) \
+            --set namespace="$(kubernetesNamespace)" \
+            --set image.tag="$(imageVersion)" \
+            --set ingress.cert.issuer="$(certificate)" \
+            --set ingress.domain.host="$(domainName)" \
+            $(additionalHelmUpgradeCLIOptions)

@@ -1,14 +1,8 @@
-[tool.mypy]
-ignore_missing_imports = true
-
-[tool.poetry.scripts]
-my_tests = "python3 -m unittest discover -s tests -v"
-
 [tool.poetry]
-name = "gas-optim"
-version = "0.1.0"
+name = "gas-storage-optimization"
+version = "0.1.1"
 description = ""
-authors = ["juzun <zaplejtalja@gmail.com>"]
+authors = ["Jakub Zapletal <zaplejtalja@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -24,6 +18,17 @@ nbformat = "^5.9.2"
 psutil = "^5.9.6"
 blinker = "^1.7.0"
 highspy = "^1.5.3"
+flake8 = "^6.1.0"
+black = "^23.12.1"
+msal-streamlit-authentication = "^1.0.9"
+logging = "^0.4.9.6"
+requests = "^2.31.0"
+azure-identity = "^1.15.0"
+azure-keyvault = "^4.2.0"
+pip-audit = "^2.7.0"
+types-requests = "^2.31.0.20240106"
+pytest = "^7.4.4"
+pytest-cov = "^4.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
