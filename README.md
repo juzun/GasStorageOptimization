@@ -6,7 +6,7 @@ User can choose from predefined storage templates. Some storage parameters are t
 Correctly defined storage can then be optimized. After optimization (which duration might vary depending on size of the storage and its constraints) applicaiton produces downloadable export in form of graph and Excel table.
 
 
-# Gettin started
+# Getting started
 To run the application type command `poetry run streamlit run src/Main.py`. Note that this application is dockerized.
 
 To use the application, user must login with his ADEEQP account, which has to be enlisted in specific Azure user's group (for more information contact <jakub.zapletal@eon.com>).
@@ -105,7 +105,7 @@ $$x_i = 0, i\notin injection\_season $$
 
 - <b>State to date</b>
 
-$$z_i \geq bsd\_state\_to\_date_{bsd\_months}\cdot wgv_i$$
+$$z_i \geq bsd\_ state\_to\_date_{bsd\_months}\cdot wgv_i$$
 
 
     self.mdl.constr_state_to_date = pyo.ConstraintList()
